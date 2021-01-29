@@ -30,7 +30,7 @@ namespace detector
         // a padded convolution with custom kernel size and stride
         template <long nf, int ks, int s, typename SUBNET>
         using pcon = add_layer<con_<nf, ks, ks, s, s, ks/2, ks/2>, SUBNET>;
-        // convolutional block: convolution + batch_norm + relu
+        // convolutional block: convolution + batch_norm + activation
         template <long num_filters, int ks, int s, typename SUBNET>
         using conblock = ACT<BN<pcon<num_filters, ks, s, SUBNET>>>;
         // this block downsamples the input by a factor of 8
@@ -81,13 +81,14 @@ try
     std::vector<dlib::matrix<dlib::rgb_pixel>> images_train;
     std::vector<std::vector<dlib::mmod_rect>> boxes_train;
     dlib::load_image_dataset(images_train, boxes_train, data_dir + "/training.xml");
+    dlib::add_image_left_right_flips(images_train, boxes_train);
     std::clog << "Loaded " << images_train.size() << " images" << std::endl;
 
     // adjust boxes size
     clean_dataset(images_train, boxes_train);
 
     // set up the options for the MMOD loss at a single scale (no image pyramid)
-    // this will find clusters of anchor boxes, and we consider a match if IOU > 0.6
+    // this will find clusters of anchor boxes, and we consider a match if IOU > 0.55
     dlib::mmod_options options(dlib::use_image_pyramid::no, boxes_train, 0.55);
     // ignore bounding boxes whose IOU > 0.5 or are 95% covered by another bbox
     options.overlaps_ignore = dlib::test_box_overlap(0.5, 0.95);
@@ -109,8 +110,8 @@ try
     trainer.set_learning_rate(0.1);
     trainer.be_verbose();
     trainer.set_mini_batch_size(mini_batch_size);
-    trainer.set_iterations_without_progress_threshold(500);
-    trainer.set_synchronization_file("football_detector_sync", std::chrono::minutes(5));
+    trainer.set_iterations_without_progress_threshold(5000);
+    trainer.set_synchronization_file("football_detector_sync", std::chrono::minutes(30));
     std::cout << trainer << std::endl;
 
     // start the training with minibatches
@@ -139,23 +140,23 @@ try
         generate_mini_batch();
         // some data augmentation
         for (auto&& img : mini_batch_samples)
-        {
             dlib::disturb_colors(img, rnd);
-            if (rnd.get_random_double() > 0.5)
-                dlib::flip_image_left_right(img);
-        }
 
         trainer.train_one_step(mini_batch_samples, mini_batch_labels);
     }
+    // save the network to disk
     trainer.get_net();
     net.clean();
     dlib::serialize("football_detector.dnn") << net;
+    // load the network, but in inference (test) mode
+    detector::infer tnet;
+    dlib::deserialize("football_detector.dnn") >> tnet;
     std::cout << dlib::test_object_detection_function(
-        net,
+        tnet,
         images_train,
         boxes_train,
         dlib::test_box_overlap(),
-        0,
+        0, // detection score threshold
         options.overlaps_ignore);
 }
 catch (const std::exception& e)
