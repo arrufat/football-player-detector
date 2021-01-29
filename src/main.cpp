@@ -77,7 +77,7 @@ try
         return EXIT_FAILURE;
     }
 
-    // load dataset
+    // load dataset and mirror it to effectively double its size
     std::vector<dlib::matrix<dlib::rgb_pixel>> images_train;
     std::vector<std::vector<dlib::mmod_rect>> boxes_train;
     dlib::load_image_dataset(images_train, boxes_train, data_dir + "/training.xml");
@@ -96,12 +96,12 @@ try
     options.use_bounding_box_regression = true;
     // instatiation of the detector network in train mode
     detector::train net(options);
-    // remove duplicatives biases: notably biases from convultional layers followed by batch norm
+    // remove duplicatives biases: notably biases from convolutional layers followed by batch norm
     dlib::disable_duplicative_biases(net);
     // set up the number of filters in the last layer (num classes + 4 for bounding box regression)
     net.subnet().layer_details().set_num_filters(options.detector_windows.size() * 5);
     // log the network to see the detailed definition
-    std::cout << net << std::endl;
+    std::clog << net << std::endl;
 
     std::vector<int> gpus(num_gpus);
     std::iota(gpus.begin(), gpus.end(), 0);
@@ -112,7 +112,7 @@ try
     trainer.set_mini_batch_size(mini_batch_size);
     trainer.set_iterations_without_progress_threshold(5000);
     trainer.set_synchronization_file("football_detector_sync", std::chrono::minutes(30));
-    std::cout << trainer << std::endl;
+    std::clog << trainer << std::endl;
 
     // start the training with minibatches
     decltype(images_train) mini_batch_samples;
@@ -144,6 +144,7 @@ try
 
         trainer.train_one_step(mini_batch_samples, mini_batch_labels);
     }
+    std::cout << trainer << std::endl;
     // save the network to disk
     trainer.get_net();
     net.clean();
@@ -156,7 +157,7 @@ try
         images_train,
         boxes_train,
         dlib::test_box_overlap(),
-        0, // detection score threshold
+        0,  // detection score threshold
         options.overlaps_ignore);
 }
 catch (const std::exception& e)
