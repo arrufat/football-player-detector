@@ -47,3 +47,9 @@ These are the performance details When processing 1920x1080 frames:
 
 - Speed: around 100 fps (or 10 ms per frame)
 - VRAM: around 400 MiB on the GPU
+
+## Test
+
+I tested the detector on this video: [FULL MATCH: Barça 5-2 Mallorca (2019/2020)](https://www.youtube.com/watch?v=rxslQS6KTS4)
+
+The results can be downloaded from the releases page.
