@@ -27,9 +27,9 @@ The network architecture can be divided into 3 parts:
     - 16 5x5 conv with stride = 2, batch norm, relu
     - 16 3x3 conv with stride = 2, batch norm, relu
 - feature extractor: 3 convolutional blocks with small kernel size for fast inference
-    - 32 3x3 conv with stride = 2, batch norm, relu
-    - 32 3x3 conv with stride = 2, batch norm, relu
-    - 32 3x3 conv with stride = 2, batch norm, relu
+    - 32 3x3 conv with stride = 1, batch norm, relu
+    - 32 3x3 conv with stride = 1, batch norm, relu
+    - 32 3x3 conv with stride = 1, batch norm, relu
 - final convolution that serves as the sliding window over the extracted features
     - N 9x9 conv with stride = 1, where N = num_classes * 5 (class present + 4 for bounding box regression)
 
